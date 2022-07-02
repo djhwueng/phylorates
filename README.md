@@ -1,2 +1,2 @@
 # phylorates
-Investigate internal correlated evolution using autoregressive model 
+Investigate internal correlated rate of evolution using autoregressive model 
