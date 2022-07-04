@@ -1,2 +1,2 @@
 # phylorates
-Investigate internal correlated rate of evolution using autoregressive model 
+Investigate serially autocorrelated rate evolution using Generalized AutoRegressive Conditional Heteroskedastic (GARCH) model
