@@ -1,6 +1,4 @@
-#####
 # https://cran.r-project.org/web/packages/RRphylo/vignettes/RRphylo.html
-#  you can modified this one to your ar(1) rate relationship so then you have a expaned model.
 rm(list=ls())
 library(geiger)
 #optL, which is written as to minimize the rate variation within clades, thereby acting conservatively in terms of the chance to find rate shifts and introducing phylogenetic autocorrelation in evolutionary rates (Sakamoto & Venditti, Eastmann et al. 2011) .
@@ -26,11 +24,6 @@ fastBM(tree,internal=T)->phen
 phen[1:ntaxa]->y
 y
 
-# RRphylo<-
-# function (tree, y, cov = NULL, rootV = NULL, aces = NULL, x1 = NULL,
-#     aces.x1 = NULL, clus = 0.5){
-#  cov = NULL; rootV = NULL; aces = NULL; x1 = NULL; aces.x1 = NULL; clus = 0.5
-plot(tree)
 makeL(tree)->L
 makeL1(tree)->L1
 
@@ -56,11 +49,11 @@ treelength<-tree$edge.length
 ## only you figure out the mechanism of the arch and garch 
 ## So you put the prior for the two 
 ## Now this seems work better it just need to make the tree  you put small alpha
-#archratephy<-function(alpha,tree=tree,yoriginal=yoriginal,rootV=rootV){
+# archratephy<-function(alpha,tree=tree,yoriginal=yoriginal,rootV=rootV){
 
 #install.packages("fdrtool")
 #  you shall find those who can give more zero closed priors to test
-#install.packages("extraDistr")
+# install.packages("extraDistr")
 ## You have 5 priors 
 
 ## you can share them how you find the zero means by sampling and check 
@@ -104,7 +97,7 @@ s7<-rlnorm(1, meanlog = mean(y), sdlog = sd(y)) # + log normal
 mean(s7)
 
 
-?rhalfnorm
+#?rhalfnorm
 alpha<-0.128
 kappa<-0.236
 n<-Ntip(tree)
@@ -214,72 +207,4 @@ abline(a=0,b=1)
 
 # Linear Regression using bayesian statistics Metropolis-Hastings MCMC in R
 # https://khayatrayen.github.io/MCMC.html
-
-##  lets write up the likelihood 
-#Otional 1,2,3,4 prior, garch(1,0)(1,1)
-#Also the raw models for no garch at all
-
-kappa<- rhcauchy(1, sigma = .001)
-alpha<- rhcauchy(1, sigma = .001)
-tausq<-LaplacesDemon::rinvgamma(1, shape=2, scale=0.01)
-params<-c(kappa,alpha,tausq)
-names(params)<-c("kappa","alpha","tausq")
-params
-
-
-## So far above good and inference yet to done
-
-set.seed(3132)
-tre<-rtree(5)
-tre$tip.label<-c("Sp1","Sp2","Sp3","Sp4","Sp5")
-plot(tre)
-x<-rnorm(5,mean=0,sd=5)
-#x<-rpois(5,lambda=12)
-names(x)<-tre$tip.label
-contMap(tre, x,lwd=20,fsize=2.5)
-
-
-# Now you can do the garch stuff  
-set.seed(31223)
-tre<-rtree(3)
-tre$tip.label<-c("Sp1","Sp2","Sp3")
-plot(tre)
-x<-rpois(3,lambda=2)
-names(x)<-tre$tip.label
-contMap(tre, x,lwd=20,fsize=2.5)
-
-
-
-
-
-
-##  now you have the beta vector construct by arch or garch
-## then you can do X
-#    }
-
-
-h <- mle(optL, start = list(lambda = 1), method = "L-BFGS-B",upper = 10, lower = 0.001)
-lambda <- h@coef
-betasrrphylo <- (solve(t(L) %*% L + lambda * diag(ncol(L))) %*%t(L)) %*% (as.matrix(y) - rootV)
-aceRR <- (L1 %*% betas[1:Nnode(t), ]) + rootV
-y.hat <- (L %*% betas) + rootV
-yoriginal
-y.hat
-## see , the one that you can find the lambda does not change the trait a lot
-## I think the inversion does not make the variation a lot so it is good to do
-
-
-#####
-##  you need to make your own version where you put the rate betas in a sequence like manner rather than kust the ridge regression stuff
-## it can be a series matrix multiplication. So need to figure it out.
-
-
-
-
-
-
-
-
-
-
 
