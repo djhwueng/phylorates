@@ -205,6 +205,4 @@ abline(a=0,b=1)
 plot(ace.garch11rate,ace,pch=21,bg="gray80",cex=1.5,mgp=c(1.8,0.5,0),xlab="simulated",ylab="estimated",main="Garch(1,1): phenotype at nodes (aces)",xlim=range(c(ace.garch11rate,ace)),ylim=range(c(ace.garch11rate,ace)) )
 abline(a=0,b=1)
 
-# Linear Regression using bayesian statistics Metropolis-Hastings MCMC in R
-# https://khayatrayen.github.io/MCMC.html
 
