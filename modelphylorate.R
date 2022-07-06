@@ -102,7 +102,8 @@ LikelihoodAll<-function(params=params,trait=trait,tree=tree,modeltype="garch00")
   # garch00,garch10, garch11#
   ###########################
   
-  if(modeltype=="garch00"){loglike<--ntaxa/2*tausq-t(trait-L%*%betas.rrphylo)%*%(trait-L%*%betas.rrphylo)/tausq/2}
+  if(modeltype=="garch00"){loglike<--ntaxa/2*tausq-t(trait-L%*%betas.rrphylo)%*%(trait-L%*%betas.rrphylo)/tausq/2
+  }
   
   if(modeltype=="garch10"){
     ##reorder the taxa and node 
@@ -151,23 +152,11 @@ posteriorAll <- function(params,trait=trait,tree=tree,prmodel="halfnorm",prtau="
   return(LikelihoodAll(params=params,trait=trait,tree=tree,modeltype=modeltype) + prden$prm.kappa+prden$prm.alpha+prden$prm.tausq)
 }
 
-
-###################################################
-#            main program                         #
-###################################################
-ntaxa<-5
-tree<-rtree(ntaxa)
-phen<-fastBM(tree,internal=T)
-trait<-phen[1:ntaxa]
-
-params<-priorsample(prmodel="halfnorm",prtausq="invgamma")
-
-LikelihoodAll(params=params,trait=trait,tree=tree,modeltype="garch00")
-LikelihoodAll(params=params,trait=trait,tree=tree,modeltype="garch10")
-LikelihoodAll(params=params,trait=trait,tree=tree,modeltype="garch11")
-
-posteriorAll(params,trait=trait,tree=tree,prmodel="halfnorm",prtau="invgamma",modeltype="garch00")
-posteriorAll(params,trait=trait,tree=tree,prmodel="halfnorm",prtau="invgamma",modeltype="garch10")
-posteriorAll(params,trait=trait,tree=tree,prmodel="halfnorm",prtau="invgamma",modeltype="garch11")
-
-
+################################################
+#                 proposalfunction             #       
+################################################
+proposalfunction <- function(param){
+  props<-rnorm(3,mean = param, sd= c(0.01,0.01,0.01))
+  names(props)<-c("kappa","alpha","tausq")
+  return(props)
+}
