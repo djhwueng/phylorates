@@ -23,18 +23,6 @@ priorsample<-function(prmodel="halfnorm",prtausq="invgamma"){
   return(params)
 }
 
-priorsample(prmodel="halfnorm",prtausq="invgamma")
-priorsample(prmodel="hcauchy",prtausq="invgamma")
-priorsample(prmodel="halft",prtausq="invgamma")
-priorsample(prmodel="lnorm",prtausq="invgamma")
-priorsample(prmodel="invgamma",prtausq="invgamma")
-
-priorsample(prmodel="halfnorm",prtausq="lnorm")
-priorsample(prmodel="hcauchy",prtausq="lnorm")
-priorsample(prmodel="halft",prtausq="lnorm")
-priorsample(prmodel="lnorm",prtausq="lnorm")
-priorsample(prmodel="invgamma",prtausq="lnorm")
-
 ################################################
 #             The prior function               #
 ################################################
@@ -56,26 +44,12 @@ priordensity<-function(params=params,prmodel="halfnorm",prtausq="invgamma"){
 }
 
 
-params<-priorsample(prmodel="halfnorm",prtausq="invgamma")
-priordensity(params=params,prmodel="halfnorm",prtau="invgamma")
-priordensity(params=params,prmodel="hcauchy",prtausq="invgamma")
-priordensity(params=params,prmodel="halft",prtausq="invgamma")
-priordensity(params=params,prmodel="lnorm",prtausq="invgamma")
-priordensity(params=params,prmodel="invgamma",prtausq="invgamma")
-
-priordensity(params=params,prmodel="halfnorm",prtausq="lnorm")
-priordensity(params=params,prmodel="hcauchy",prtausq="lnorm")
-priordensity(params=params,prmodel="halft",prtausq="lnorm")
-priordensity(params=params,prmodel="lnorm",prtausq="lnorm")
-priordensity(params=params,prmodel="invgamma",prtausq="lnorm")
-
-
-
 ################################################
 #         The likelihood function              #
 ################################################
+#here your can actually specify the three model garch01,garch11, and the null model garch00 
 
-like10<-function(params=params,trait=trait,tree=tree){
+LikelihoodAll<-function(params=params,trait=trait,tree=tree,modeltype="garch00"){
   kappa<-params["kappa"]# for Garch(1,1) just use kappa = 0
   alpha<-params["alpha"]
   tausq<-params["tausq"]
@@ -100,11 +74,13 @@ like10<-function(params=params,trait=trait,tree=tree){
     abs(1 - (var(Rvar)))  #+ (mean(as.matrix(y))/mean(y.hat))) #y is scaled so zero mean
   }
   
+  # compute the rootV
   u <- data.frame(trait, (1/diag(vcv(tree))^2))
   u <- u[order(u[, ncol(u)], decreasing = TRUE), ]
   u1 <- u[1:(nrow(u) * 0.1), , drop = FALSE]
   rootV <- c(apply(u1[, 1:(ncol(u1) - 1), drop = FALSE],2, function(x) weighted.mean(x, u1[, dim(u1)[2]])))# differ 
   
+  ### make poster order for ease of computing the likelihood
   ntaxa<-length(y)
   tree<-reorder(tree,"postorder")
   tree$root.edge<-0
@@ -116,68 +92,82 @@ like10<-function(params=params,trait=trait,tree=tree){
   h <- mle(optL, start = list(lambda = 1), method = "L-BFGS-B",upper = 10, lower = 0.001)
   lambda <- h@coef
   lambda
+  
+  ##here is the null model likelihood, no prior for garch but only the tausq 
   betas.rrphylo <- (solve(t(L) %*% L + lambda * diag(ncol(L))) %*%t(L)) %*% (as.matrix(y) - rootV)
   betas.rrphylo
-  betas.rrphylo<-betas.rrphylo[c(ntaxa:(2*ntaxa-1),1:(ntaxa-1)),]
-  betas.rrphylo
   
   
-  betas.archrate<-array(NA,c(2*ntaxa-1))#this is Garch(1,0)
-  names(betas.archrate)<-colnames(L)
-  betas.archrate<-betas.archrate[c(ntaxa:(2*ntaxa-1),1:(ntaxa-1))]
-  betas.archrate[names(betas.archrate)==ntaxa+1] <- betas.rrphylo[ntaxa+1]#sqrt(bm.fit$opt$sigsq)
-  betas.archrate
+  ###########################
+  # garch00,garch10, garch11#
+  ###########################
   
-  for(index in N:1){
-    betas.archrate[des[index]]<- betas.rrphylo[des[index]] + alpha/treelength[index]*betas.archrate[anc[index]]
-  }  
-  betas.rrphylo<-betas.rrphylo[c((ntaxa+1):(2*ntaxa-1),1:ntaxa)]
-  betas.archrate<-betas.archrate[c((ntaxa+1):(2*ntaxa-1),1:ntaxa)]
+  if(modeltype=="garch00"){loglike<--ntaxa/2*tausq-t(trait-L%*%betas.rrphylo)%*%(trait-L%*%betas.rrphylo)/tausq/2}
   
-  #this is prediction
-  trait
-  y.hat.rrphylo <- (L %*% betas.rrphylo) + rootV
-  ace.rrphylo <- (L1 %*% betas.rrphylo[1:Nnode(tree) ]) + rootV
-  y.hat.archrate <- (L %*% betas.archrate) + rootV
-  ace.archrate <- (L1 %*% betas.archrate[1:Nnode(tree) ]) + rootV
-  ###
+  if(modeltype=="garch10"){
+    ##reorder the taxa and node 
+    betas.rrphylo<-betas.rrphylo[c(ntaxa:(2*ntaxa-1),1:(ntaxa-1)),]
+    betas.archrate<-array(NA,c(2*ntaxa-1))#this is Garch(1,0)
+    names(betas.archrate)<-colnames(L)
+    betas.archrate<-betas.archrate[c(ntaxa:(2*ntaxa-1),1:(ntaxa-1))]
+    betas.archrate[names(betas.archrate)==ntaxa+1] <- betas.rrphylo[ntaxa+1]
+    for(index in N:1){
+      betas.archrate[des[index]]<- betas.rrphylo[des[index]] + alpha/treelength[index]*betas.archrate[anc[index]]
+    }  
+    betas.archrate<-betas.archrate[c((ntaxa+1):(2*ntaxa-1),1:ntaxa)]
+    loglike<--ntaxa/2*tausq-t(trait-L%*%betas.archrate)%*%(trait-L%*%betas.archrate)/tausq/2  
+  }
   
-  loglike<--ntaxa/2*tausq-t(trait-L%*%betas.archrate)%*%(trait-L%*%betas.archrate)/tausq/2  
+  if(modeltype=="garch11"){
+    ##reorder the taxa and node 
+    betas.rrphylo<-betas.rrphylo[c(ntaxa:(2*ntaxa-1),1:(ntaxa-1)),]
+    betas.garch11rate<-array(NA,c(2*ntaxa-1))#this is Garch(1,1)
+    names(betas.garch11rate)<-colnames(L)
+    betas.garch11rate<-betas.garch11rate[c(ntaxa:(2*ntaxa-1),1:(ntaxa-1))]
+    betas.garch11rate[names(betas.garch11rate)==ntaxa+1] <- betas.rrphylo[ntaxa+1]
+    for(index in N:1){
+      betas.garch11rate[des[index]]<- betas.rrphylo[des[index]]+ kappa/treelength[index]*betas.garch11rate[anc[index]]*rnorm(1,0,treelength[index])^2  + alpha/treelength[index]*betas.garch11rate[anc[index]]
+    }  
+    betas.garch11rate<-betas.garch11rate[c((ntaxa+1):(2*ntaxa-1),1:ntaxa)]
+    loglike<--ntaxa/2*tausq-t(trait-L%*%betas.garch11rate)%*%(trait-L%*%betas.garch11rate)/tausq/2  
+  }
   return(loglike)
 }
 
-
-ntaxa<-5
-tree<-rtree(ntaxa)
-phen<-fastBM(tree,internal=T)
-trait<-phen[1:ntaxa]
-trait
-like10(params=params,trait=trait,tree=tree)
+#this is prediction
+# trait
+# y.hat.rrphylo <- (L %*% betas.rrphylo) + rootV
+# ace.rrphylo <- (L1 %*% betas.rrphylo[1:Nnode(tree) ]) + rootV
+# y.hat.archrate <- (L %*% betas.archrate) + rootV
+# ace.archrate <- (L1 %*% betas.archrate[1:Nnode(tree) ]) + rootV
+###
 
 ################################################
 #            The posterior distribution        #
 ################################################
 
-postg10 <- function(params,trait=trait,tree=tree,prmodel="halfnorm",prtau="invgamma"){
+posteriorAll <- function(params,trait=trait,tree=tree,prmodel="halfnorm",prtau="invgamma",modeltype="garch00"){
   prden<-priordensity(params=params,prmodel="halfnorm",prtau="invgamma")
-  return(like10(params=params,trait=trait,tree=tree) + prden$prm.kappa+prden$prm.alpha+prden$prm.tausq)
+  return(LikelihoodAll(params=params,trait=trait,tree=tree,modeltype=modeltype) + prden$prm.kappa+prden$prm.alpha+prden$prm.tausq)
 }
-
 
 
 ###################################################
 #            main program                         #
 ###################################################
 ntaxa<-5
-rtree(ntaxa)->tree
-fastBM(tree,internal=T)->phen
-phen[1:ntaxa]->trait
-trait
+tree<-rtree(ntaxa)
+phen<-fastBM(tree,internal=T)
+trait<-phen[1:ntaxa]
 
-prmodel="halfnorm"
-prtausq="invgamma"
+params<-priorsample(prmodel="halfnorm",prtausq="invgamma")
 
-postg10(params,trait=trait,tree=tree,prmodel="halfnorm",prtau="invgamma")
+LikelihoodAll(params=params,trait=trait,tree=tree,modeltype="garch00")
+LikelihoodAll(params=params,trait=trait,tree=tree,modeltype="garch10")
+LikelihoodAll(params=params,trait=trait,tree=tree,modeltype="garch11")
 
+posteriorAll(params,trait=trait,tree=tree,prmodel="halfnorm",prtau="invgamma",modeltype="garch00")
+posteriorAll(params,trait=trait,tree=tree,prmodel="halfnorm",prtau="invgamma",modeltype="garch10")
+posteriorAll(params,trait=trait,tree=tree,prmodel="halfnorm",prtau="invgamma",modeltype="garch11")
 
 
